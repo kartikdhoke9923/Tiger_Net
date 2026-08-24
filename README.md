@@ -6,6 +6,26 @@ to demonstrate the pipeline and prove out the security/offline-first design
 — it is **not field-ready** until the stub sections below are replaced with
 real models and a real central server.
 
+<<<<<<< HEAD
+=======
+## What's new in this build
+- **Web dashboard is live** (`app/dashboard/web.py`) — role-aware browser UI,
+  fully offline: Python stdlib `http.server`, zero pip installs at the range
+  office, zero CDN assets (no internet needed to render a page). Login is
+  username + PIN (salted PBKDF2 via `app/security/auth.py`); every page and
+  POST goes through the same RBAC + audit module as everything else. Includes
+  the human-review queue as clickable actions (confirm / register-new /
+  dismiss false positives) with CSRF protection on every POST.
+- **MegaDetector backend implemented** (`app/prefilter/classifier.py`) — set
+  `PENCH_PREFILTER_BACKEND=megadetector` to run real MegaDetector v5 inference
+  via PytorchWildlife. Honest limits stated in the docstring: MD detects
+  animal/person/vehicle — it cannot say "tiger", so animals route to
+  `animal_other` unless you also supply a `species_filter` classifier.
+- **EXIF timestamps** (`app/ingestion/ingest.py`) — capture time now read from
+  EXIF DateTimeOriginal/DateTime via Pillow; file mtime only as a loudly-logged
+  fallback.
+
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 ## What's real and tested right now
 - Full pipeline runs end-to-end: ingest → classify → shortlist → human
   review → sync attempt → dashboard (verified, see test run below)
@@ -64,10 +84,17 @@ the function has a docstring flagging exactly what to check and adjust.
 ## What's still stubbed — replace before any real field use
 | Module | File | What to do |
 |---|---|---|
+<<<<<<< HEAD
 | Image classification | `app/prefilter/classifier.py` | Wire `MegaDetectorBackend` to real MegaDetector/PytorchWildlife inference |
 | Central sync endpoint | `app/sync/sync_queue.py` | Replace `CENTRAL_ENDPOINT` placeholder with a real server + auth |
 | EXIF timestamp reading | `app/ingestion/ingest.py` | Currently uses file mtime; use Pillow's EXIF reader on real camera files |
 | Deep re-ID model | `app/idmatch/feature_matcher.py` | ORB is a working v1; swap in a trained embedding model (e.g. fine-tuned on real Bengal tiger images) for real accuracy |
+=======
+| Central sync endpoint | `app/sync/sync_queue.py` | Replace `CENTRAL_ENDPOINT` placeholder with a real server + auth |
+| Tiger species ID | `app/prefilter/classifier.py` | MegaDetector detects animal/person; supply a `species_filter` (trained classifier) to promote animals to `tiger_candidate` |
+| Deep re-ID model | `app/idmatch/feature_matcher.py` | ORB is a working v1; swap in a trained embedding model (e.g. fine-tuned on real Bengal tiger images) for real accuracy |
+| Web auth hardening | `app/security/auth.py`, `app/dashboard/web.py` | PIN login is prototype-grade: add lockout/rotation/real credential policy before field use |
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
 Every stub has a docstring explaining exactly what it fakes and why.
 
@@ -75,6 +102,7 @@ Every stub has a docstring explaining exactly what it fakes and why.
 ```
 app/
   db/schema.py          -- SQLite schema, single source of truth for structure
+<<<<<<< HEAD
   ingestion/ingest.py    -- pulls images from data/incoming/<camera_code>/
   prefilter/classifier.py -- blank/animal/human/tiger classification
   idmatch/matcher.py      -- tiger ID shortlist generation, 3-tier confidence
@@ -83,16 +111,51 @@ app/
   security/access_control.py -- RBAC + audit log, all sensitive reads go through here
   dashboard/summary.py    -- role-aware local dashboard
 run_pipeline.py           -- runs all stages with checks, in order
+=======
+  ingestion/ingest.py    -- pulls images from data/incoming/<camera_code>/, EXIF timestamps
+  prefilter/classifier.py -- blank/animal/human/tiger classification (stub + real MegaDetector)
+  idmatch/matcher.py      -- tiger ID shortlist generation, 3-tier confidence
+  idmatch/feature_matcher.py -- ORB keypoint matcher (real CV baseline)
+  idmatch/atrw_loader.py  -- ATRW benchmark loader (source-tagged, isolated)
+  review/interface.py     -- human confirmation logic + CLI loop
+  sync/sync_queue.py      -- offline-first push to central system
+  security/access_control.py -- RBAC + audit log, all sensitive reads go through here
+  security/auth.py        -- PBKDF2 PIN hashing for web login
+  dashboard/summary.py    -- role-aware local text dashboard
+  dashboard/web.py        -- offline web UI (stdlib server, sessions, CSRF)
+run_pipeline.py           -- runs all stages with checks, in order
+tests/                    -- pytest suite (84 tests), incl. RBAC/web end-to-end
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 tests/seed_demo_data.py   -- creates demo users/cameras/images to test with
 ```
 
 ## Running it
 ```bash
 pip install opencv-python-headless numpy pillow --break-system-packages
+<<<<<<< HEAD
 python3 tests/seed_demo_data.py   # creates demo DB, users, cameras, real synthetic test images
 python3 run_pipeline.py           # runs ingest -> classify -> shortlist -> sync -> dashboard
 python3 -m app.review.interface   # view pending human-review queue
 python3 -m app.dashboard.summary <user_id>  # role-specific dashboard
+=======
+python3 tests/seed_demo_data.py   # demo DB, users (PIN: 1234), cameras, test images
+python3 run_pipeline.py           # ingest -> classify -> shortlist -> sync -> dashboard
+
+# Web dashboard (offline, no extra deps):
+python3 -m app.dashboard.web                 # http://127.0.0.1:8070
+# login: ranger_amit / officer_priya / stpf_team1 / researcher_wct, PIN 1234
+# (DEMO credentials — rotate before any real use; admin user not seeded by default)
+
+# Review via terminal instead:
+python3 -m app.review.interface
+
+# Real MegaDetector inference instead of the filename stub:
+pip install torch torchvision pytorch-wildlife
+PENCH_PREFILTER_BACKEND=megadetector python3 run_pipeline.py
+
+# Run the test suite:
+python3 -m pytest tests/ -q
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
 # Optional: load real ATRW images to test the matcher on real photos
 # (read the ATRW caveat above first)

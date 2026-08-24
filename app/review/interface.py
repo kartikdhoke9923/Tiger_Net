@@ -9,7 +9,11 @@ code path that sets sightings.tiger_id without going through confirm_sighting().
 """
 
 from app.db.schema import get_connection
+<<<<<<< HEAD
 from app.security.access_control import get_user, AccessDenied
+=======
+from app.security.access_control import get_user, _log, AccessDenied
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
 
 def pending_reviews(conn=None):
@@ -22,6 +26,10 @@ def pending_reviews(conn=None):
            FROM sightings s
            JOIN images i ON i.id = s.image_id
            WHERE s.tiger_id IS NULL AND s.confirmed_at IS NULL
+<<<<<<< HEAD
+=======
+             AND (s.resolution IS NULL OR s.resolution = '')
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
            ORDER BY s.confidence_tier DESC, s.match_confidence DESC"""
     ).fetchall()
     if own_conn:
@@ -29,6 +37,17 @@ def pending_reviews(conn=None):
     return [dict(r) for r in rows]
 
 
+<<<<<<< HEAD
+=======
+def _require_review_role(conn, user_id, action_label):
+    user = get_user(conn, user_id)
+    if user["role"] not in ("field_ranger", "range_officer", "admin"):
+        _log(conn, user_id, "DENIED_ACCESS", action_label)
+        raise AccessDenied(f"Role '{user['role']}' is not permitted to perform review actions")
+    return user
+
+
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 def confirm_sighting(sighting_id: int, tiger_id: int, user_id: int, conn=None):
     """
     Human confirms this image is a specific known tiger.
@@ -39,6 +58,7 @@ def confirm_sighting(sighting_id: int, tiger_id: int, user_id: int, conn=None):
     if own_conn:
         conn = get_connection()
 
+<<<<<<< HEAD
     user = get_user(conn, user_id)
     if user["role"] not in ("field_ranger", "range_officer", "admin"):
         raise AccessDenied(f"Role '{user['role']}' is not permitted to confirm sightings")
@@ -46,6 +66,14 @@ def confirm_sighting(sighting_id: int, tiger_id: int, user_id: int, conn=None):
     conn.execute(
         """UPDATE sightings
            SET tiger_id = ?, confirmed_by_user_id = ?, confirmed_at = datetime('now')
+=======
+    _require_review_role(conn, user_id, "sightings")
+
+    conn.execute(
+        """UPDATE sightings
+           SET tiger_id = ?, confirmed_by_user_id = ?, confirmed_at = datetime('now'),
+               resolution = 'confirmed'
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
            WHERE id = ?""",
         (tiger_id, user_id, sighting_id),
     )
@@ -71,9 +99,13 @@ def mark_new_individual(sighting_id: int, local_id: str, user_id: int, conn=None
     if own_conn:
         conn = get_connection()
 
+<<<<<<< HEAD
     user = get_user(conn, user_id)
     if user["role"] not in ("field_ranger", "range_officer", "admin"):
         raise AccessDenied(f"Role '{user['role']}' is not permitted to register new tigers")
+=======
+    _require_review_role(conn, user_id, "sightings")
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
     image_row = conn.execute(
         "SELECT i.file_path FROM sightings s JOIN images i ON i.id = s.image_id WHERE s.id = ?",
@@ -84,18 +116,61 @@ def mark_new_individual(sighting_id: int, local_id: str, user_id: int, conn=None
 
     conn.execute(
         """UPDATE sightings
+<<<<<<< HEAD
            SET tiger_id = ?, confirmed_by_user_id = ?, confirmed_at = datetime('now'), is_new_individual = 1
+=======
+           SET tiger_id = ?, confirmed_by_user_id = ?, confirmed_at = datetime('now'),
+               is_new_individual = 1, resolution = 'new_individual'
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
            WHERE id = ?""",
         (tiger_id, user_id, sighting_id),
     )
     row = conn.execute("SELECT image_id FROM sightings WHERE id = ?", (sighting_id,)).fetchone()
     conn.execute("UPDATE images SET reviewed = 1 WHERE id = ?", (row["image_id"],))
+<<<<<<< HEAD
+=======
+    _log(conn, user_id, "CONFIRM_NEW_TIGER", "sightings", sighting_id)
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
     conn.commit()
     if own_conn:
         conn.close()
     return tiger_id
 
 
+<<<<<<< HEAD
+=======
+def dismiss_sighting(sighting_id: int, user_id: int, reason: str = "", conn=None):
+    """
+    Reviewer marks this 'tiger candidate' as a false positive (e.g. a deer
+    the pre-filter over-promoted). The sighting row is kept with
+    resolution='dismissed' for the audit trail -- never deleted -- and the
+    image leaves the review queue.
+    """
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
+
+    _require_review_role(conn, user_id, "sightings")
+
+    row = conn.execute("SELECT image_id FROM sightings WHERE id = ?", (sighting_id,)).fetchone()
+    if not row:
+        raise ValueError(f"No sighting {sighting_id}")
+
+    conn.execute(
+        """UPDATE sightings
+           SET confirmed_by_user_id = ?, confirmed_at = datetime('now'),
+               resolution = 'dismissed'
+           WHERE id = ?""",
+        (user_id, sighting_id),
+    )
+    conn.execute("UPDATE images SET reviewed = 1 WHERE id = ?", (row["image_id"],))
+    _log(conn, user_id, "DISMISS_SIGHTING", "sightings", sighting_id)
+    conn.commit()
+    if own_conn:
+        conn.close()
+
+
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 def run_cli():
     """Simple terminal review loop for local testing / demo. Replace with web UI later."""
     conn = get_connection()

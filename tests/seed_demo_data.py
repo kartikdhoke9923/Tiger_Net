@@ -20,6 +20,10 @@ import cv2
 import numpy as np
 
 from app.db.schema import init_db, get_connection
+<<<<<<< HEAD
+=======
+from app.security.auth import set_user_pin
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
 
 def _make_stripe_image(seed: int, size: int = 300):
@@ -56,6 +60,21 @@ def seed_users(conn):
     conn.commit()
 
 
+<<<<<<< HEAD
+=======
+DEMO_PIN = "1234"  # DEMO ONLY -- rotate/replace with real credentials before field use
+
+
+def seed_pins(conn):
+    """Web dashboard login (app/dashboard/web.py). All demo users get the
+    same PIN so a demo doesn't stall on credentials; this is NOT acceptable
+    practice for production."""
+    rows = conn.execute("SELECT id FROM users").fetchall()
+    for r in rows:
+        set_user_pin(conn, r["id"], DEMO_PIN)
+
+
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 def seed_cameras(conn):
     cameras = [
         ("PTR-CAM-001", "BEAT-01", 21.7679, 79.2961, "general"),
@@ -127,9 +146,18 @@ def main():
     seed_users(conn)
     seed_cameras(conn)
     seed_reference_tiger(conn)
+<<<<<<< HEAD
     conn.close()
     seed_incoming_images()
     print("[seed] done. Run: python run_pipeline.py")
+=======
+    seed_pins(conn)
+    conn.close()
+    seed_incoming_images()
+    print(f"[seed] done. Run: python run_pipeline.py")
+    print(f"[seed] web dashboard: python3 -m app.dashboard.web  "
+          f"(login: ranger_amit / officer_priya / stpf_team1 / researcher_wct, PIN: {DEMO_PIN})")
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
 
 if __name__ == "__main__":

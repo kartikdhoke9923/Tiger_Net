@@ -130,9 +130,39 @@ def get_connection():
     return conn
 
 
+<<<<<<< HEAD
 def init_db():
     conn = get_connection()
     conn.executescript(SCHEMA)
+=======
+def _migrate(conn):
+    """
+    Idempotent column migrations. CREATE TABLE IF NOT EXISTS does not touch
+    pre-existing tables, so added-later columns need guarded ALTER TABLE here.
+    pin_salt / pin_hash back the web dashboard login (app/dashboard/web.py +
+    app/security/auth.py). NULL pin = no web login yet for that user.
+    """
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "pin_hash" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pin_hash TEXT")
+    if "pin_salt" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN pin_salt TEXT")
+    sighting_cols = {r["name"] for r in conn.execute("PRAGMA table_info(sightings)").fetchall()}
+    if "resolution" not in sighting_cols:
+        # 'confirmed' | 'new_individual' | 'dismissed'; NULL = still pending.
+        # 'dismissed' lets reviewers clear false-positive tiger candidates
+        # (e.g. a deer the pre-filter over-promoted) instead of leaving them
+        # stuck in the queue forever -- the row is kept for the record,
+        # never deleted.
+        conn.execute("ALTER TABLE sightings ADD COLUMN resolution TEXT")
+    conn.commit()
+
+
+def init_db():
+    conn = get_connection()
+    conn.executescript(SCHEMA)
+    _migrate(conn)
+>>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
     conn.commit()
     conn.close()
     print(f"[db] initialized at {DB_PATH}")
