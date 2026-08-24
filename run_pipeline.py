@@ -74,13 +74,7 @@ def main():
           f"{shortlist_count} shortlist(s) generated for {len(candidates)} tiger-candidate image(s)")
 
     print("\n-- Stage 5: Human review --")
-<<<<<<< HEAD
     print("    (skipped in automated run — see: python -m app.review.interface)")
-=======
-    print("    (skipped in automated run -- options:")
-    print("       CLI: python3 -m app.review.interface")
-    print("       Web: python3 -m app.dashboard.web  -> http://127.0.0.1:8070)")
->>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
 
     print("\n-- Stage 6: Sync attempt --")
     sync_result = run_sync()

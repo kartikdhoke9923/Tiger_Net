@@ -1,6 +1,2 @@
-<<<<<<< HEAD
 {"attempted_at": "2026-08-23T13:11:41.092781", "payload": {"type": "human_detections", "data": [{"id": 1, "image_id": 1, "camera_id": 2, "detected_at": "2026-08-23 13:11:41", "zone_type": "restricted", "alert_sent": 0, "alert_sent_at": null, "acknowledged_by_user_id": null}]}}
 {"attempted_at": "2026-08-23T13:41:27.775289", "payload": {"type": "human_detections", "data": [{"id": 1, "image_id": 1, "camera_id": 2, "detected_at": "2026-08-23 13:41:27", "zone_type": "restricted", "alert_sent": 0, "alert_sent_at": null, "acknowledged_by_user_id": null}]}}
-=======
-{"attempted_at": "2026-08-23T20:12:30.946831", "payload": {"type": "human_detections", "data": [{"id": 1, "image_id": 4, "camera_id": 2, "detected_at": "2026-08-23 14:42:29", "zone_type": "restricted", "alert_sent": 0, "alert_sent_at": null, "acknowledged_by_user_id": null}]}}
->>>>>>> b2727e2c528f5d462e2e467856663ce86d7f5a25
