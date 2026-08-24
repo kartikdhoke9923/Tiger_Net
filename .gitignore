@@ -1,0 +1,38 @@
+# Large files (1GB+)
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.wmv
+
+# Large datasets
+*.csv
+*.json
+*.sqlite
+*.db
+
+# Model files
+*.h5
+*.pb
+*.onnx
+*.pkl
+
+# Compressed files
+*.zip
+*.rar
+*.7z
+*.tar.gz
+
+# Specific folders
+data/
+models/
+videos/
+images/
+uploads/
+temp/
+cache/
+
+# Or ignore specific files
+large_file_1.csv
+dataset_4gb.zip
+video_1gb.mp4
