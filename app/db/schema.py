@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS images (
     captured_at TEXT NOT NULL,          -- from EXIF/camera metadata, not upload time
     ingested_at TEXT DEFAULT (datetime('now')),
     classification TEXT CHECK(classification IN
-        ('unclassified', 'blank', 'animal_other', 'human', 'tiger_candidate')),
+        ('unclassified', 'blank', 'animal_other', 'human', 'tiger_candidate', 'uncertain')),
     classification_confidence REAL,
     reviewed INTEGER DEFAULT 0,          -- 0/1, has a human looked at this
     synced_to_central INTEGER DEFAULT 0  -- 0/1, offline queue status

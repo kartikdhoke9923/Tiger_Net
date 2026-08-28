@@ -22,6 +22,12 @@ routing tiger-candidates onward, routing humans to alerting) is real and
 functional today.
 """
 
+MODEL_VERSION = "MDV6-yolov10-e"  # change to "MDV6-yolov10-e" to test the bigger, slower, more accurate model
+CONFIDENT_THRESHOLD = 0.65   # above this: trust the label      # below this: treat as blank
+# Between these two = genuinely unsure -> goes to human review instead of a guess.
+# These numbers are a first estimate from your 30-image test, not a validated cutoff.
+# Expect to re-tune once you've reviewed more real results.
+
 from dataclasses import dataclass
 from pathlib import Path
 from app.db.schema import get_connection
@@ -57,19 +63,46 @@ class StubBackend(Detector):
 
 
 class MegaDetectorBackend(Detector):
-    """
-    STUB — implement this to call real MegaDetector inference.
-    Left unimplemented deliberately; see module docstring.
-    """
-    def classify(self, image_path: str) -> ClassificationResult:
-        raise NotImplementedError(
-            "Wire this up to MegaDetector / PytorchWildlife before using in production. "
-            "See module docstring for guidance."
-        )
+    def __init__(self):
+        from PytorchWildlife.models import detection as pw_detection
+        self.model = pw_detection.MegaDetectorV6(version=MODEL_VERSION)
 
+    def classify(self, image_path: str) -> ClassificationResult:
+        result = self.model.single_image_detection(image_path)
+        labels = result["labels"]
+
+        if not labels:
+            return ClassificationResult("blank", 1.0)
+
+        confidences = result["detections"].confidence
+        categories = [label.split()[0] for label in labels]
+
+        # Check for ANY person detection first, even if an animal in the same
+        # frame scored higher. This is a poacher-detection system -- silently
+        # dropping a real person because a cow scored higher confidence in the
+        # same photo is not an acceptable trade-off.
+        person_indices = [i for i, c in enumerate(categories) if c == "person"]
+        if person_indices:
+            best_person_idx = max(person_indices, key=lambda i: confidences[i])
+            person_confidence = float(confidences[best_person_idx])
+            if person_confidence >= CONFIDENT_THRESHOLD:
+                return ClassificationResult("human", person_confidence)
+            return ClassificationResult("uncertain", person_confidence)
+
+        # No person in the frame -- proceed as before with the best detection
+        best_idx = confidences.argmax()
+        confidence = float(confidences[best_idx])
+        if confidence < CONFIDENT_THRESHOLD:
+            return ClassificationResult("uncertain", confidence)
+        return ClassificationResult("animal_other", confidence)
+
+_backend_singleton = None
 
 def get_backend() -> Detector:
-    return StubBackend()
+    global _backend_singleton
+    if _backend_singleton is None:
+        _backend_singleton = MegaDetectorBackend()
+    return _backend_singleton
 
 
 def classify_and_store(image_id: int, image_path: str, conn=None):
@@ -114,7 +147,7 @@ def run_batch(image_rows):
     operator-facing summary after a batch run.
     """
     conn = get_connection()
-    counts = {"blank": 0, "animal_other": 0, "human": 0, "tiger_candidate": 0}
+    counts = {"blank": 0, "animal_other": 0, "human": 0, "tiger_candidate": 0, "uncertain": 0}
     for row in image_rows:
         result = classify_and_store(row["id"], row["file_path"], conn=conn)
         counts[result.label] += 1

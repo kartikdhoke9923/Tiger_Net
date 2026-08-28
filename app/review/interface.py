@@ -11,6 +11,62 @@ code path that sets sightings.tiger_id without going through confirm_sighting().
 from app.db.schema import get_connection
 from app.security.access_control import get_user, AccessDenied
 
+def pending_uncertain_images(conn=None):
+    """Images the classifier couldn't confidently bucket -- needs a human tag."""
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, file_path, classification_confidence FROM images "
+        "WHERE classification = 'uncertain' AND reviewed = 0"
+    ).fetchall()
+    if own_conn:
+        conn.close()
+    return [dict(r) for r in rows]
+
+def pending_species_review(conn=None):
+    """
+    Images MegaDetector found *something* in, but we don't yet know if
+    that something is a tiger. Covers both 'uncertain' (low confidence)
+    and 'animal_other' (confident it's an animal, species unknown) --
+    either could turn out to be a tiger, so both need a human glance.
+    """
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
+    rows = conn.execute(
+        "SELECT id, file_path, classification, classification_confidence FROM images "
+        "WHERE classification IN ('uncertain', 'animal_other') AND reviewed = 0"
+    ).fetchall()
+    if own_conn:
+        conn.close()
+    return [dict(r) for r in rows]
+
+
+def reclassify_image(image_id: int, new_label: str, user_id: int, conn=None):
+    """Human manually assigns the correct bucket for an 'uncertain' image."""
+    valid = {"blank", "animal_other", "human", "tiger_candidate"}
+    if new_label not in valid:
+        raise ValueError(f"new_label must be one of {valid}")
+
+    own_conn = conn is None
+    if own_conn:
+        conn = get_connection()
+
+    get_user(conn, user_id)  # just validates the user exists
+    
+    # 'tiger_candidate' still needs individual-ID matching next -- leave
+    # reviewed=0 so run_pipeline.py's stage 4 picks it up. Every other label
+    # is a dead end (nothing more to process), so mark those reviewed=1.
+    reviewed_flag = 0 if new_label == "tiger_candidate" else 1
+    conn.execute("UPDATE images SET classification = ?, reviewed = ? WHERE id = ?", (new_label, reviewed_flag, image_id))
+    conn.execute(
+        "INSERT INTO audit_log (user_id, action, resource, resource_id) VALUES (?, 'RECLASSIFY', 'images', ?)",
+        (user_id, image_id),
+    )
+    conn.commit()
+    if own_conn:
+        conn.close()
 
 def pending_reviews(conn=None):
     own_conn = conn is None
