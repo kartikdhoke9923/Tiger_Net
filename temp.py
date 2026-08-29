@@ -1,8 +1,20 @@
 from app.db.schema import get_connection
-from tests.seed_demo_data import seed_users, seed_cameras
 
 conn = get_connection()
-seed_users(conn)
-seed_cameras(conn)
+
+before = conn.execute("SELECT COUNT(*) as c FROM sightings").fetchone()["c"]
+
+conn.execute("""
+    DELETE FROM sightings
+    WHERE id NOT IN (
+        SELECT MIN(id) FROM sightings
+        WHERE tiger_id IS NULL AND confirmed_at IS NULL
+        GROUP BY image_id
+    )
+    AND tiger_id IS NULL AND confirmed_at IS NULL
+""")
+conn.commit()
+
+after = conn.execute("SELECT COUNT(*) as c FROM sightings").fetchone()["c"]
+print(f"Sightings: {before} -> {after}")
 conn.close()
-print("users + cameras added, your real images in data/incoming untouched")

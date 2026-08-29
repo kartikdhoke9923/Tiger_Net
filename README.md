@@ -111,9 +111,3 @@ python3 -m app.idmatch.atrw_loader /path/to/atrw/images /path/to/reid_list.csv
 4. Confirm what compute is actually available at range offices — this
    assumes a local server/laptop-class device; adjust if it needs to run on
    more constrained hardware
-
-
-
-
-first i tested test1.py with a model then changed the model 
-and tested in test2.py ahd classifier.py to check the speed animal score or blank score
